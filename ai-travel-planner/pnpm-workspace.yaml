@@ -1,0 +1,10 @@
+# pnpm 的包缓存位置。
+# 用**相对路径**:始终解析到本目录下的 .pnpm-store,
+# 于是整个项目自包含 —— 无论你把文件夹搬到哪都不会失效。
+# (不要写成绝对路径:绝对路径会被记录进 node_modules/.modules.yaml,
+#  一旦目录搬动, pnpm 就会在旧路径重建缓存并重新下载。)
+storeDir: .pnpm-store
+# pnpm 11+ 的构建许可配置(原生模块 better-sqlite3 需要编译,否则无法运行)
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true

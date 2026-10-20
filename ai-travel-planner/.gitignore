@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+.next/
+out/
+build/
+data/*.db
+data/*.db-journal
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,40 @@
+# === 依赖 / 构建产物 ===
+node_modules/
+.pnpm-store/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# === 环境变量 / 密钥（绝不入库）===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# === 本地数据库 / 数据 ===
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+*.sqlite
+*.sqlite3
+
+# === 第三方 / 大文件，不入库 ===
+# MediaCrawler 是独立克隆的上游仓库（自带 .git），如需请自行 git clone
+MediaCrawler/
+# 历史迭代快照（含 node_modules，仅供本地存档）
+项目迭代历史/
+
+# === 系统垃圾 ===
+.DS_Store
+Thumbs.db
+*.log
+
+# sqlite 临时文件（任意层级）
+*.db-wal
+*.db-shm
+*.db-journal
