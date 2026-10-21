@@ -111,6 +111,24 @@ export const pois = sqliteTable(
   (t) => [index("pois_city_idx").on(t.cityId), index("pois_area_idx").on(t.area)],
 );
 
+/** 小红书候选卡片：采集后先保存，人工核实坐标后才进入 pois。 */
+export const xhsCards = sqliteTable(
+  "xhs_cards",
+  {
+    id: text("id").primaryKey(),
+    cityId: text("city_id").notNull(),
+    cardJson: text("card_json").notNull(),
+    geoVerified: integer("geo_verified", { mode: "boolean" }).notNull().default(false),
+    lat: real("lat"),
+    lng: real("lng"),
+    area: text("area"),
+    geoProvider: text("geo_provider"),
+    collectedAt: text("collected_at").notNull(),
+    verifiedAt: text("verified_at"),
+  },
+  (t) => [index("xhs_cards_city_idx").on(t.cityId)],
+);
+
 /** 优缺点条目 —— 展示层与语料层分离(决策 D-25) */
 export const poiProsCons = sqliteTable(
   "poi_pros_cons",
@@ -124,7 +142,7 @@ export const poiProsCons = sqliteTable(
     /** 展示层:对外展示的文本。升级前为用户原文,升级后与 text 一致 */
     displayText: text("display_text").notNull(),
     sourceType: text("source_type", {
-      enum: ["official", "review", "ugc", "ai_inferred"],
+      enum: ["official", "review", "xhs", "ugc", "ai_inferred"],
     }).notNull(),
     /**
      * 条目来源(与 source_type 是两件事):

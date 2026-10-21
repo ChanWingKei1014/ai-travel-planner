@@ -11,7 +11,7 @@
  *      + **全部用户原声(👍/👎/📌 三组,不限条数)**
  */
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SourceBadge } from "./SourceBadge";
 import { UgcInlineForm } from "./UgcInlineForm";
 import {
@@ -68,6 +68,7 @@ export function PoiDetailDrawer({
   const isStay = poi.category === "stay";
   const isFood = poi.category === "food";
   const factsIsAiSeed = poi.factsProvider === "ai_seed";
+  const awaitingGeo = poi.dataSource === "xhs" && !poi.geoVerified;
 
   const report = async () => {
     setReporting(true);
@@ -130,10 +131,11 @@ export function PoiDetailDrawer({
           </div>
 
           <p className="text-[13.5px] leading-relaxed text-[var(--ink)]">{poi.summary}</p>
+          {poi.summarySourceIds?.length ? <p className="mt-1 text-[11px] text-[var(--ink-faint)]">简介依据 {poi.summarySourceIds.join("、")}</p> : null}
 
           {/* 适合人群/体力 */}
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {!isStay && !isFood && (
+            {!isStay && !isFood && !poi.dataSource && (
               <Tag>体力 {PHYSICAL_LOAD_LABEL[poi.physicalLoad]}</Tag>
             )}
             {poi.suitableFor.map((s) => (
@@ -154,6 +156,7 @@ export function PoiDetailDrawer({
                     <span className="flex-1">
                       {p.text}
                       <SourceBadge type={p.sourceType} detail={p.sourceDetail} />
+                      {p.sourceIds?.length ? <span className="ml-1 text-[11px] text-[var(--ink-faint)]">依据 {p.sourceIds.join("、")}</span> : null}
                     </span>
                   </li>
                 ))}
@@ -174,6 +177,7 @@ export function PoiDetailDrawer({
                     <span className="flex-1">
                       {c.text}
                       <SourceBadge type={c.sourceType} detail={c.sourceDetail} />
+                      {c.sourceIds?.length ? <span className="ml-1 text-[11px] text-[var(--ink-faint)]">依据 {c.sourceIds.join("、")}</span> : null}
                     </span>
                   </li>
                 ))}
@@ -185,7 +189,7 @@ export function PoiDetailDrawer({
           <section className="mt-4 rounded-xl border border-[var(--line)] p-3">
             <h3 className="mb-1.5 text-[13px] font-semibold">客观信息</h3>
             <dl className="space-y-1 text-[12.5px]">
-              {!isStay && (
+              {!isStay && !poi.dataSource && (
                 <Row label={isFood ? "建议用餐" : "建议停留"}>
                   {formatDurationRange(poi.durationMinutes.min, poi.durationMinutes.max)}
                 </Row>
@@ -197,15 +201,16 @@ export function PoiDetailDrawer({
                   {poi.ticket.updatedAt ? `(更新于 ${poi.ticket.updatedAt.slice(0, 10)})` : ""}
                 </Row>
               )}
-              {isStay && poi.lodgingLevel && (
+              {isStay && !poi.dataSource && poi.lodgingLevel && (
                 <Row label="价位档">{levelLabel(poi.lodgingLevel)}</Row>
               )}
-              {isFood && poi.mealType && (
+              {isFood && !poi.dataSource && poi.mealType && (
                 <Row label="适合餐次">
                   {poi.mealType === "both" ? "午 / 晚餐" : MEAL_LABEL[poi.mealType]}
                 </Row>
               )}
-              <Row label="位置">{[poi.lat.toFixed(4), poi.lng.toFixed(4)].join(", ")}</Row>
+              <Row label="位置">{awaitingGeo ? "待人工核实坐标" : [poi.lat.toFixed(4), poi.lng.toFixed(4)].join(", ")}</Row>
+              {poi.geoVerified && poi.geoProvider && <Row label="坐标来源">{poi.geoProvider}</Row>}
             </dl>
             {factsIsAiSeed && (
               <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--accent)]">
@@ -221,7 +226,7 @@ export function PoiDetailDrawer({
           </section>
 
           {/* 邻近关系 */}
-          {(isStay || isFood) && (
+          {(isStay || isFood) && !awaitingGeo && (
             <section className="mt-4 rounded-xl bg-[var(--brand-soft)] p-3">
               <h3 className="mb-1.5 text-[13px] font-semibold text-[var(--brand)]">
                 {isStay ? "🏨 离这些游玩点近" : "🍽 离这些游玩点近"}
@@ -241,8 +246,24 @@ export function PoiDetailDrawer({
             </section>
           )}
 
+          {poi.dataSource === "xhs" && (
+            <section className="mt-4 rounded-xl border border-[var(--line)] p-3">
+              <h3 className="mb-1.5 text-[13px] font-semibold">小红书材料来源</h3>
+              <p className="mb-2 text-[11.5px] text-[var(--ink-faint)]">以下为用户发布内容，卡片文字据此整理；并非官方核验。</p>
+              <ul className="space-y-2">
+                {(poi.xhsSources ?? []).map((source) => (
+                  <li key={source.id} className="text-[12px] leading-relaxed">
+                    <div className="font-medium">{source.kind === "comment" ? "评论" : "笔记"} · {source.title || source.noteId} <span className="font-normal text-[var(--ink-faint)]">({source.id})</span></div>
+                    <p className="text-[var(--ink-soft)]">{source.excerpt}</p>
+                    {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] hover:underline">查看原文 ↗</a>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* 全部用户原声 */}
-          <section className="mt-4">
+          {(!poi.dataSource || poi.geoVerified) && <section className="mt-4">
             <h3 className="mb-2 text-[13px] font-semibold">
               💬 去过的人说({poi.userVoices.length})
               <span className="ml-1.5 text-[11.5px] font-normal text-[var(--ink-faint)]">
@@ -283,10 +304,10 @@ export function PoiDetailDrawer({
             )}
 
             <UgcInlineForm poiId={poi.id} poiName={poi.name} onSubmitted={onChanged} />
-          </section>
+          </section>}
 
           {/* 举报 */}
-          <div className="mt-4 border-t border-[var(--line)] pt-3">
+          {(!poi.dataSource || poi.geoVerified) && <div className="mt-4 border-t border-[var(--line)] pt-3">
             {!reporting ? (
               <button type="button" className="btn btn-sm" onClick={report}>
                 这条不对
@@ -304,17 +325,18 @@ export function PoiDetailDrawer({
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* 底部操作 */}
         <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-4 py-3">
           <span className="text-[12px] text-[var(--ink-faint)]">
-            {selected ? "已加入本次行程" : "尚未加入本次行程"}
+            {awaitingGeo ? "坐标待核实，暂不可加入行程" : selected ? "已加入本次行程" : "尚未加入本次行程"}
           </span>
           <button
             type="button"
             className={`btn ${selected ? "" : "btn-primary"}`}
+            disabled={awaitingGeo}
             onClick={() => {
               onToggle(poi.id);
             }}

@@ -11,12 +11,14 @@
 export type SourceType =
   | "official" // 官方:来自景点官网/官方发布
   | "review" // 评论:来自真实用户评论的归纳,含被交叉验证的 UGC
+  | "xhs" // 小红书笔记或评论整理，保留原文引用
   | "ugc" // 用户反馈:本站用户提交的原文,尚未达到交叉验证条件
   | "ai_inferred"; // AI 综合:模型基于公开知识归纳,未经核实
 
 export const SOURCE_LABEL: Record<SourceType, string> = {
   official: "官方",
   review: "评论",
+  xhs: "小红书",
   ugc: "用户反馈",
   ai_inferred: "AI 综合",
 };
@@ -25,6 +27,7 @@ export const SOURCE_LABEL: Record<SourceType, string> = {
 export const SOURCE_STYLE: Record<SourceType, string> = {
   official: "bg-blue-50 text-blue-700 ring-blue-200",
   review: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  xhs: "bg-red-50 text-red-700 ring-red-200",
   ugc: "bg-amber-50 text-amber-700 ring-amber-200",
   ai_inferred: "bg-slate-100 text-slate-600 ring-slate-200",
 };
@@ -34,6 +37,17 @@ export interface ProsConsItem {
   sourceType: SourceType;
   /** 来源详情,如"近 90 天 230 条评论归纳""5 位用户确认" */
   sourceDetail?: string;
+  /** 小红书笔记或评论的证据 ID；站内旧内容无此字段。 */
+  sourceIds?: string[];
+}
+
+export interface XhsSourceRef {
+  id: string;
+  kind: "note" | "comment";
+  noteId: string;
+  title: string;
+  url?: string;
+  excerpt: string;
 }
 
 /* ============================================================
@@ -84,6 +98,8 @@ export interface TripParams {
   /** 城市 ID 列表,支持多城市联游(决策 D-09) */
   cityIds: string[];
   days: number;
+  /** 出行总人数；旧行程缺失时按默认 2 人处理。 */
+  travelers?: number;
   origin?: string;
   budgetTier: BudgetTier;
   companion: Companion;
@@ -99,6 +115,7 @@ export interface TripParams {
 
 export const DEFAULT_TRIP_PARAMS: Omit<TripParams, "cityIds" | "poiIds" | "lodgingIds"> = {
   days: 5,
+  travelers: 2,
   origin: "",
   budgetTier: "standard",
   companion: "friends",
@@ -189,6 +206,7 @@ export interface PoiCard {
   lng: number;
   /** 一句话简介 ≤ 40 字 */
   summary: string;
+  summarySourceIds?: string[];
   pros: ProsConsItem[];
   cons: ProsConsItem[];
   /** 建议停留时长(分钟) */
@@ -218,6 +236,12 @@ export interface PoiCard {
    * 服务端动态计算,不落库
    */
   nearby?: NearbyRef[];
+  /** 采集点位必须有可核实坐标才能参与排程。 */
+  geoVerified?: boolean;
+  geoProvider?: string;
+  dataSource?: "xhs";
+  xhsSources?: XhsSourceRef[];
+  xhsAliases?: string[];
 }
 
 /** 邻近关系条目 */

@@ -26,7 +26,6 @@ export function CityTagFlow({ cities, onPick, onMore, limit = 20 }: CityTagFlowP
     <div className="flex flex-wrap items-center gap-2">
       {shown.map((c) => {
         const isHot = c.rank !== null && c.rank !== undefined && c.rank <= 5;
-        const noContent = c.poiCount === 0;
         return (
           <button
             key={c.id}
@@ -38,9 +37,7 @@ export function CityTagFlow({ cities, onPick, onMore, limit = 20 }: CityTagFlowP
             {isHot && <span className="tnum opacity-60">#{c.rank}</span>}
             <span className="text-[15px] leading-none">{c.icon}</span>
             {c.nameCn}
-            {noContent && (
-              <span className="text-[10.5px] font-normal opacity-60">筹备中</span>
-            )}
+            <span className="text-[10.5px] font-normal opacity-60">搜索小红书</span>
           </button>
         );
       })}

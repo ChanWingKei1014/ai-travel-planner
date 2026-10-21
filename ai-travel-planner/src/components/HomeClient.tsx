@@ -9,7 +9,7 @@
  *   3. 点任一城市(标签流或选择器内)→ 行程参数弹窗(**不跳页**,决策 D-47)
  */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CityTagFlow } from "./CityTagFlow";
 import { DestinationPicker } from "./DestinationPicker";
 import { TripParamsModal } from "./TripParamsModal";
@@ -28,12 +28,6 @@ export function HomeClient({
   const [paramsCity, setParamsCity] = useState<CityListItem | null>(null);
 
   const list = scope === "domestic" ? domestic : overseas;
-
-  /** 有内容的城市,用于"该城市筹备中"时给替代推荐 */
-  const featured = useMemo(
-    () => [...domestic, ...overseas].filter((c) => c.poiCount > 0),
-    [domestic, overseas],
-  );
 
   const openParams = (city: CityListItem) => {
     setPickerOpen(false);
@@ -91,7 +85,6 @@ export function HomeClient({
       {/* 行程参数弹窗(不跳页) */}
       <TripParamsModal
         city={paramsCity}
-        featuredCities={featured}
         onClose={() => setParamsCity(null)}
       />
     </section>

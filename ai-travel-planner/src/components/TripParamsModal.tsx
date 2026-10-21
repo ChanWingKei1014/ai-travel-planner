@@ -26,11 +26,10 @@ import type { CityListItem } from "@/lib/repo";
 export interface TripParamsModalProps {
   city: CityListItem | null;
   onClose: () => void;
-  /** 有内容城市列表,用于无内容时给出替代推荐 */
-  featuredCities?: CityListItem[];
   /** 已有参数(从 URL query 带入时用于回显) */
   initial?: Partial<{
     days: number;
+    travelers: number;
     origin: string;
     budgetTier: BudgetTier;
     companion: Companion;
@@ -42,6 +41,7 @@ export interface TripParamsModalProps {
    */
   onApplyOverride?: (draft: {
     days: number;
+    travelers: number;
     origin: string;
     budgetTier: BudgetTier;
     companion: Companion;
@@ -52,12 +52,12 @@ export interface TripParamsModalProps {
 export function TripParamsModal({
   city,
   onClose,
-  featuredCities = [],
   initial,
   onApplyOverride,
 }: TripParamsModalProps) {
   const router = useRouter();
   const [days, setDays] = useState(DEFAULT_TRIP_PARAMS.days);
+  const [travelers, setTravelers] = useState(DEFAULT_TRIP_PARAMS.travelers ?? 2);
   const [origin, setOrigin] = useState("");
   const [budgetTier, setBudgetTier] = useState<BudgetTier>(DEFAULT_TRIP_PARAMS.budgetTier);
   const [companion, setCompanion] = useState<Companion>(DEFAULT_TRIP_PARAMS.companion);
@@ -67,6 +67,7 @@ export function TripParamsModal({
   useEffect(() => {
     if (!city) return;
     setDays(initial?.days ?? DEFAULT_TRIP_PARAMS.days);
+    setTravelers(initial?.travelers ?? DEFAULT_TRIP_PARAMS.travelers ?? 2);
     setOrigin(initial?.origin ?? "");
     setBudgetTier(initial?.budgetTier ?? DEFAULT_TRIP_PARAMS.budgetTier);
     setCompanion(initial?.companion ?? DEFAULT_TRIP_PARAMS.companion);
@@ -87,11 +88,10 @@ export function TripParamsModal({
 
   if (!city) return null;
 
-  const hasContent = city.poiCount > 0;
-
   const submit = () => {
     const draft = {
       days,
+      travelers,
       origin: origin.trim(),
       budgetTier,
       companion,
@@ -105,6 +105,7 @@ export function TripParamsModal({
     }
     const q = new URLSearchParams({
       days: String(days),
+      travelers: String(travelers),
       budget: budgetTier,
       companion,
       pace,
@@ -147,36 +148,9 @@ export function TripParamsModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {!hasContent && (
-            <div className="mb-3 rounded-xl border border-[#f0d9c4] bg-[var(--accent-soft)] px-3 py-2.5">
-              <p className="text-[12.5px] leading-relaxed text-[var(--accent)]">
-                该城市的内容正在筹备中。你仍然可以填参数,但暂时生成不出可玩点。
-                {featuredCities.length > 0 && "可以先看看这些已有内容的城市:"}
-              </p>
-              {featuredCities.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {featuredCities.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="chip"
-                      onClick={() => {
-                        onClose();
-                        router.push(`/city/${c.id}`);
-                      }}
-                    >
-                      <span>{c.icon}</span>
-                      {c.nameCn}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           <p className="text-[13.5px] font-medium">先说一下这趟 {city.nameCn} 怎么玩</p>
           <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-soft)]">
-            这些信息会用来裁剪后面的可玩点列表 —— 比如带父母出行,就不会把高强度徒步排在前面。
+            这些信息会用于生成小红书搜索词和整理推荐点 —— 比如带父母出行,会优先寻找节奏舒缓的内容。
             除天数外都可以跳过,跳过时按标准值处理。
           </p>
 
@@ -203,6 +177,18 @@ export function TripParamsModal({
                   onChange={(e) => setDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
                 />
               </div>
+            </Field>
+
+            <Field label="出行人数" hint="含自己，用于匹配住宿与餐饮建议">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                aria-label="出行人数"
+                className="input w-[100px] py-1.5 text-center"
+                value={travelers}
+                onChange={(e) => setTravelers(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
+              />
             </Field>
 
             <Field label="从哪出发" hint="可选,用于估算到达日">
@@ -269,14 +255,14 @@ export function TripParamsModal({
 
         <div className="flex items-center justify-between gap-3 border-t border-[var(--line)] px-4 py-3">
           <span className="text-[12px] text-[var(--ink-faint)]">
-            {hasContent ? `该城市已上线 ${city.poiCount} 个可玩点` : "内容筹备中"}
+            下一步将搜索小红书笔记与评论
           </span>
           <div className="flex gap-2">
             <button type="button" className="btn btn-sm" onClick={onClose}>
               取消
             </button>
             <button type="button" className="btn btn-primary" onClick={submit}>
-              {onApplyOverride ? "按新参数重新生成" : "下一步:挑可玩点"}
+              {onApplyOverride ? "按新参数重新搜索" : "搜索并挑可玩点"}
             </button>
           </div>
         </div>

@@ -21,13 +21,13 @@ export default function HomePage() {
           <span className="text-[var(--brand)]">可以照着走的行程</span>
         </h1>
         <p className="mt-2.5 max-w-[620px] text-[14px] leading-relaxed text-[var(--ink-soft)]">
-          {APP_NAME} 不做文章。你选城市、挑点位,算法按区域聚类与通勤上限把日程算出来,
-          AI 只负责把结果写成人话。每个点位都告诉你
+          {APP_NAME} 从小红书笔记和评论中整理有来源的推荐点。你选城市、填写出行信息，
+          核实坐标后的点位可加入行程，再由算法安排路线。卡片会展示有依据的
           <span className="text-[var(--brand)]">好处</span>与
           <span className="text-[var(--accent)]">不好的一面</span>,并标注信息来源。
         </p>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-[var(--ink-faint)]">
-          <span>已收录 {stats.pois} 个可玩点</span>
+          <span>支持 {domestic.length + overseas.length} 个目的地搜索</span>
           <span>·</span>
           <span>{stats.publicTrips} 份公开行程</span>
           <span>·</span>
@@ -63,7 +63,7 @@ export default function HomePage() {
         <div className="mt-2.5 grid gap-3 sm:grid-cols-3">
           {[
             ["1 · 选城市", "从国内/国外标签墙里挑目的地,热门榜带 icon 标识。"],
-            ["2 · 挑可玩点", "先填天数与节奏,系统裁剪出适合你的候选;每张卡片都有好处与不好的一面。"],
+            ["2 · 挑可玩点", "先填天数、人数与节奏，系统搜索小红书并整理有依据的候选卡片。"],
             ["3 · 拿行程", "算法排程 + AI 配文案,按上午/下午/晚上给到可直接执行的日程。"],
           ].map(([t, d]) => (
             <div key={t}>

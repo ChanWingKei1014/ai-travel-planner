@@ -35,6 +35,8 @@ export interface ChatOptions {
   /** 是否要求模型返回 JSON 对象 */
   jsonMode?: boolean;
   timeoutMs?: number;
+  /** 单次任务可省略额外推理参数；来源逐条抽取已有本地证据校验。 */
+  thinking?: "high" | "max" | false;
 }
 
 export interface ChatUsage {
@@ -113,9 +115,9 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
     if (options.jsonMode !== false) {
       body.response_format = { type: "json_object" };
     }
-    if (withReasoning) {
+    if (withReasoning && options.thinking !== false) {
       // 该模型仅支持 high / max 两档
-      body.reasoning_effort = getThinkingLevel();
+      body.reasoning_effort = options.thinking ?? getThinkingLevel();
     }
     return body;
   };

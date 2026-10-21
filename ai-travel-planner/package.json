@@ -14,7 +14,9 @@
     "gen:extra": "tsx scripts/generate-lodging-food.ts",
     "db:seed": "tsx src/db/seed.ts",
     "test:scheduler": "tsx scripts/test-scheduler.ts",
-    "test:llm": "tsx scripts/test-llm.ts"
+    "test:llm": "tsx scripts/test-llm.ts",
+    "test:xhs": "node --import tsx scripts/test-xhs-crawler.ts && node --import tsx scripts/test-xhs-acceptance.ts && node --import tsx scripts/test-xhs-ui.tsx",
+    "xhs:verify": "tsx scripts/verify-xhs-poi.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

@@ -32,6 +32,7 @@ interface Body {
   /** v2.0 变更 4:用户选中的住宿 ID(可多选) */
   lodgingIds?: string[];
   days?: number;
+  travelers?: number;
   origin?: string;
   budgetTier?: BudgetTier;
   companion?: Companion;
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
     poiIds,
     lodgingIds,
     days: clampDays(body.days),
+    travelers: Number.isFinite(Number(body.travelers)) && Number(body.travelers) >= 1 ? Math.min(20, Math.floor(Number(body.travelers))) : DEFAULT_TRIP_PARAMS.travelers,
     origin: body.origin?.trim() ?? "",
     budgetTier: VALID_BUDGET.includes(body.budgetTier as BudgetTier)
       ? (body.budgetTier as BudgetTier)
@@ -101,6 +103,13 @@ async function runPlan(
   step: (code: string, text: string, detail?: string, progress?: number) => void,
 ) {
   const cards = listPoiCardsByIds([...params.poiIds, ...params.lodgingIds]);
+  const found = new Set(cards.map((card) => card.id));
+  if ([...params.poiIds, ...params.lodgingIds].some((id) => !found.has(id))) {
+    throw new Error("所选地点尚未核实坐标或已失效，请返回重新选择");
+  }
+  if (cards.some((card) => card.dataSource === "xhs" && !card.geoVerified)) {
+    throw new Error("所选小红书地点尚未核实坐标，暂不能排程");
+  }
   if (cards.length === 0) throw new Error("所选点位不存在,请返回重新选择");
 
   const lodgings = cards.filter((c) => c.category === "stay");
@@ -118,7 +127,7 @@ async function runPlan(
 
   // 未选住宿时,用该城市的全部住宿候选池做"住宿建议"
   const lodgingPool = cityIds.flatMap((cid) =>
-    listPoiCardsByCity(cid).filter((p) => p.category === "stay"),
+    listPoiCardsByCity(cid).filter((p) => p.category === "stay" && (cards.every((c) => c.dataSource !== "xhs") || p.dataSource === "xhs" && p.geoVerified)),
   );
   if (lodgings.length === 0 && lodgingPool.length > 0) {
     step("T1", `正在解析已选点位(共 ${cards.length} 个)`, "未选住宿,将按当天区域给出建议");

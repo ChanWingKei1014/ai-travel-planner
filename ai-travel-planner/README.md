@@ -15,7 +15,7 @@ pnpm install
 
 # 2. 配置环境变量
 cp .env.example .env.local
-#   LLM_MODE=mock  → 不联网、不花钱,用本地数据跑通全流程
+#   LLM_MODE=mock  → 不调用真实模型；小红书推荐需要 live 模式
 #   LLM_MODE=live  → 真实调用 DeepSeek
 #   DEEPSEEK_API_KEY 可留空,本机开发会自动从 ~/.dsh/.credentials.yaml 读取
 
@@ -32,6 +32,36 @@ pnpm gen:seed sydney     # 指定城市
 # 6. 启动
 pnpm dev                # http://localhost:3210
 ```
+
+### 小红书推荐数据源
+
+选择目的地并填写行程条件后，`/api/cards` 会生成搜索词，启动相邻目录的 MediaCrawler 搜索笔记和评论，再整理成带原文依据的卡片。需要 `LLM_MODE=live`、可用的 DeepSeek 凭证、MediaCrawler 的 Python 环境，以及 **MediaCrawler 专用 Chrome 配置目录** `../MediaCrawler/browser_data/cdp_xhs_user_data_dir` 中的小红书登录态；日常 Chrome 登录不会自动共享到该目录。采集在服务端运行，建议本机开发使用；无浏览器的部署环境需要另行提供采集服务。
+
+- 默认读取 `../MediaCrawler` 和 `../MediaCrawler/.venv/bin/python`；路径不同可在 `.env.local` 配置 `MEDIA_CRAWLER_DIR`、`MEDIA_CRAWLER_PYTHON`。
+- 每次请求使用独立临时目录；当前单进程一次只运行一个采集任务。适配层优先连接已打开的专用 Chrome，搜索时每类关键词最多整理 2 篇笔记、每篇最多 2 条评论；采集超时、登录失效、平台临时限流、无结果和整理失败都会在页面显示原因并允许重试。连续测试时应留出间隔，避免频繁触发平台限制。
+- 卡片只保留必要的笔记标题、材料摘录、来源链接和引用关系。小红书用户内容标记为「小红书」，并非官方信息；缺少证据的优缺点不补写。
+- 新地点默认显示「坐标待核实」，暂不能加入行程。人工查证坐标后运行 `pnpm xhs:verify <xhs_id> <纬度> <经度> <区域> <核实来源>`，即可把该地点写入排程点位表；重新采集不会清除核实结果。
+- `pnpm test:xhs` 测试 JSONL 读取、来源校验、保存与核实流程；`node --import tsx scripts/check-xhs-login.ts` 检查专用 Chrome 登录态；`node --import tsx scripts/smoke-xhs-live.ts` 测试真实模型和已有 JSONL 格式；`node --import tsx scripts/smoke-xhs-crawl.ts` 仅采集一篇笔记用于本机登录验收；`node --import tsx scripts/smoke-xhs-pipeline.ts` 会实际采集并写入应用数据库，避免反复执行。
+
+MediaCrawler 自带非商业学习许可。实际使用前请确认其许可及小红书内容使用规则，并控制采集频率。
+
+#### 安装 MediaCrawler
+
+从本仓库根目录执行以下命令（需要 Git、uv 和 Chrome）。MediaCrawler 保持独立上游仓库，固定到本次验收使用的版本；补丁只调整小红书搜索数量限制和末页处理，沿用上游许可。
+
+```bash
+git clone https://github.com/NanmiCoder/MediaCrawler.git MediaCrawler
+cd MediaCrawler
+git checkout 8f583999006d5b692272c608440e193ca282e73b
+git apply ../ai-travel-planner/scripts/patches/mediacrawler-xhs-note-limit.patch
+uv sync
+uv run playwright install chromium
+cd ../ai-travel-planner
+```
+
+已经安装并应用过补丁时，无需重复执行。不要把已有登录目录替换成新克隆。保持 `config/base_config.py` 中 `ENABLE_CDP_MODE = True`、`CDP_HEADLESS = False`，建议将 `CRAWLER_MAX_SLEEP_SEC` 设为 `5`；适配层会自动选择启动或连接专用 Chrome，无需修改上游的 `CDP_CONNECT_EXISTING`。
+
+首次在网页搜索时，MediaCrawler 会打开专用 Chrome；按提示登录小红书。登录检查脚本已随本项目提交，不依赖上游目录中的额外 `check_login.py`。换电脑后需要重新配置 `.env.local`、初始化数据库并登录，旧电脑的登录态和采集数据不会随 GitHub 同步。
 
 ### 内置账号
 
@@ -192,4 +222,4 @@ src/
 - ⬜ 多城市联游(P1,引擎已支持,UI 未放开)
 - ⬜ 第三方 POI / 图库 API 接入(P1,当前图片为占位)
 
-详细决策与实测记录见 `项目决策记录.md`,完整需求见 `旅游攻略-初期需求文档-v0.4.md`。
+详细决策与实测记录见上级目录的 `项目决策记录.md` 和 `小红书数据源-验收记录-2026-10-20.md`，本次需求见 `旅游攻略-需求文档-v2.1-小红书数据源.md`。小红书采集仍有平台临时请求失败及三类覆盖待验项，当前验收状态以验收记录为准。

@@ -1,0 +1,44 @@
+diff --git a/media_platform/xhs/core.py b/media_platform/xhs/core.py
+index 8110907..134f139 100644
+--- a/media_platform/xhs/core.py
++++ b/media_platform/xhs/core.py
+@@ -138,15 +138,14 @@ class XiaoHongShuCrawler(AbstractCrawler):
+         """Search for notes and retrieve their comment information."""
+         utils.logger.info("[XiaoHongShuCrawler.search] Begin search Xiaohongshu keywords")
+         xhs_limit_count = 20  # Xiaohongshu limit page fixed value
+-        if config.CRAWLER_MAX_NOTES_COUNT < xhs_limit_count:
+-            config.CRAWLER_MAX_NOTES_COUNT = xhs_limit_count
++        max_notes_per_keyword = max(1, config.CRAWLER_MAX_NOTES_COUNT)
+         start_page = config.START_PAGE
+         for keyword in config.KEYWORDS.split(","):
+             source_keyword_var.set(keyword)
+             utils.logger.info(f"[XiaoHongShuCrawler.search] Current search keyword: {keyword}")
+             page = 1
+             search_id = get_search_id()
+-            while (page - start_page + 1) * xhs_limit_count <= config.CRAWLER_MAX_NOTES_COUNT:
++            while (page - start_page) * xhs_limit_count < max_notes_per_keyword:
+                 if page < start_page:
+                     utils.logger.info(f"[XiaoHongShuCrawler.search] Skip page {page}")
+                     page += 1
+@@ -163,10 +162,11 @@ class XiaoHongShuCrawler(AbstractCrawler):
+                         sort=(SearchSortType(config.SORT_TYPE) if config.SORT_TYPE != "" else SearchSortType.GENERAL),
+                     )
+                     utils.logger.info(f"[XiaoHongShuCrawler.search] Search notes response: {notes_res}")
+-                    if not notes_res or not notes_res.get("has_more", False):
++                    if not notes_res or not notes_res.get("items"):
+                         utils.logger.info("[XiaoHongShuCrawler.search] No more content!")
+                         break
+                     semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
++                    remaining = max_notes_per_keyword - (page - start_page) * xhs_limit_count
+                     task_list = [
+                         self.get_note_detail_async_task(
+                             note_id=post_item.get("id"),
+@@ -174,7 +174,7 @@ class XiaoHongShuCrawler(AbstractCrawler):
+                             xsec_token=post_item.get("xsec_token"),
+                             semaphore=semaphore,
+                         ) for post_item in notes_res.get("items", {}) if post_item.get("model_type") not in ("rec_query", "hot_query")
+-                    ]
++                    ][:remaining]
+                     note_details = await asyncio.gather(*task_list)
+                     for note_detail in note_details:
+                         if note_detail:

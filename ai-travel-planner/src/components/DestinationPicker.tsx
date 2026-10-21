@@ -190,13 +190,7 @@ export function DestinationPicker({
                       </span>
                     </span>
                     <span className="shrink-0 text-[11.5px]">
-                      {c.poiCount > 0 ? (
-                        <span className="rounded-md bg-[var(--brand-soft)] px-1.5 py-0.5 text-[var(--brand)]">
-                          有内容
-                        </span>
-                      ) : (
-                        <span className="text-[var(--ink-faint)]">筹备中</span>
-                      )}
+                      <span className="text-[var(--ink-faint)]">搜索小红书</span>
                     </span>
                   </button>
                 </li>

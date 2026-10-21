@@ -7,7 +7,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db, rawDb } from "./client";
 import {
   cities,
@@ -114,12 +114,13 @@ function upsertHotRankings(): void {
 }
 
 function clearCityPois(cityId: string): void {
-  const existing = db.select({ id: pois.id }).from(pois).where(eq(pois.cityId, cityId)).all();
+  const existing = db.select({ id: pois.id }).from(pois)
+    .where(and(eq(pois.cityId, cityId), ne(pois.sourceLayer, "xhs_verified"))).all();
   for (const p of existing) {
     db.delete(poiProsCons).where(eq(poiProsCons.poiId, p.id)).run();
     db.delete(poiFacts).where(eq(poiFacts.poiId, p.id)).run();
   }
-  db.delete(pois).where(eq(pois.cityId, cityId)).run();
+  db.delete(pois).where(and(eq(pois.cityId, cityId), ne(pois.sourceLayer, "xhs_verified"))).run();
 }
 
 function importCity(file: SeedFile, city: CitySeed): number {

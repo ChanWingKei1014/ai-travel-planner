@@ -14,7 +14,7 @@ import { UGC_MAX_LENGTH } from "@/lib/types";
  * 一、可玩点卡片生成
  * ============================================================ */
 
-const SourceTypeSchema = z.enum(["official", "review", "ugc", "ai_inferred"]);
+const SourceTypeSchema = z.enum(["official", "review", "xhs", "ugc", "ai_inferred"]);
 
 /** 单条优缺点 */
 export const ProsConsSchema = z.object({

@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 /**
  * 可玩点卡片(v2.0 变更 3 / 需求文档 v2.0 第 8.3 节 / 决策 D-49、D-50)
@@ -47,6 +48,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
   const isStay = poi.category === "stay";
   const isFood = poi.category === "food";
   const factsIsAiSeed = poi.factsProvider === "ai_seed";
+  const awaitingGeo = poi.dataSource === "xhs" && !poi.geoVerified;
   const extraVoices = Math.max(0, poi.userVoices.length - VOICE_LIMIT_ON_CARD);
 
   return (
@@ -75,6 +77,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
         <button
           type="button"
           onClick={() => onToggle(poi.id)}
+          disabled={awaitingGeo}
           aria-pressed={selected}
           aria-label={selected ? "取消选择" : "选择这个点位"}
           className={`absolute right-2.5 top-2.5 grid h-7 w-7 place-items-center rounded-full border text-[13px] font-semibold transition ${
@@ -97,6 +100,11 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
           ) : null}
         </h3>
         <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--ink-soft)]">{poi.summary}</p>
+        {poi.dataSource === "xhs" && (
+          <p className="mt-1 text-[11.5px] text-[var(--ink-faint)]">
+            依据 {poi.xhsSources?.length ?? 0} 条小红书笔记 / 评论整理 · 详情可查看来源
+          </p>
+        )}
 
         {/* 好处 */}
         {poi.pros.length > 0 && (
@@ -138,18 +146,19 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
 
         {/* ★ 客观信息行(v2.0 上移到「去过的人说」上方) */}
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--line)] pt-2.5 text-[12px] text-[var(--ink-faint)]">
-          {!isStay && (
+          {!isStay && !poi.dataSource && (
             <span>
               🕐 建议{isFood ? "用餐" : "停留"}{" "}
               {formatDurationRange(poi.durationMinutes.min, poi.durationMinutes.max)}
             </span>
           )}
-          {!isStay && !isFood && <span>体力 {PHYSICAL_LOAD_LABEL[poi.physicalLoad]}</span>}
-          {isStay && poi.lodgingLevel && <span>价位档 {levelLabel(poi.lodgingLevel)}</span>}
-          {isFood && poi.mealType && (
+          {!isStay && !isFood && !poi.dataSource && <span>体力 {PHYSICAL_LOAD_LABEL[poi.physicalLoad]}</span>}
+          {isStay && !poi.dataSource && poi.lodgingLevel && <span>价位档 {levelLabel(poi.lodgingLevel)}</span>}
+          {isFood && !poi.dataSource && poi.mealType && (
             <span>适合 {poi.mealType === "both" ? "午/晚餐" : MEAL_LABEL[poi.mealType]}</span>
           )}
           {poi.adoptedByTrips > 0 && <span>已被 {poi.adoptedByTrips} 个行程采用</span>}
+          {awaitingGeo && <span className="text-[var(--accent)]">地点坐标待核实，暂不可加入行程</span>}
         </div>
 
         {(poi.openingHours || poi.ticket) && (
@@ -170,7 +179,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
         )}
 
         {/* ★ 邻近关系(住宿 / 餐饮必须展示 —— D-54 硬要求) */}
-        {(isStay || isFood) && (
+        {(isStay || isFood) && !awaitingGeo && (
           <div className="mt-2.5 rounded-lg bg-[var(--brand-soft)] px-2.5 py-2">
             <div className="mb-1 text-[11.5px] font-medium text-[var(--brand)]">
               {isStay ? "🏨 离这些地方近" : "🍽 离这些地方近"}
@@ -184,13 +193,13 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
                 ))}
               </ul>
             ) : (
-              <p className="text-[12px] text-[var(--brand)]">邻近关系计算中</p>
+              <p className="text-[12px] text-[var(--brand)]">暂无已核实的邻近游玩点</p>
             )}
           </div>
         )}
 
         {/* 去过的人说(卡片最多 3 条,超出进抽屉) */}
-        <div className="mt-3 flex-1">
+        {poi.dataSource !== "xhs" && <div className="mt-3 flex-1">
           <div className="mb-1.5 text-[12px] font-medium text-[var(--ink-soft)]">
             💬 去过的人说
             <span className="ml-1 font-normal text-[var(--ink-faint)]">
@@ -226,7 +235,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
               )}
             </>
           )}
-        </div>
+        </div>}
 
         {/* 操作区 */}
         <div className="mt-3 flex items-center justify-between gap-2 pt-1">
@@ -237,6 +246,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
             type="button"
             className={`btn btn-sm ${selected ? "btn-primary" : ""}`}
             onClick={() => onToggle(poi.id)}
+            disabled={awaitingGeo}
           >
             {selected ? "已选" : "选择"}
           </button>

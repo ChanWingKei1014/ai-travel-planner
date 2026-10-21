@@ -38,6 +38,7 @@ import type {
 import { id, nowIso, shareSlug } from "@/lib/ids";
 import { attachNearby } from "@/lib/nearby";
 import { safeJson } from "@/lib/utils";
+import { loadXhsCard } from "@/lib/xhs/store";
 
 /* ============================================================
  * 城市
@@ -422,15 +423,17 @@ function hydratePoiCards(rows: Array<typeof pois.$inferSelect>, cityName: string
   const prosConsMap = loadProsCons(ids);
   const factsMap = loadFacts(ids);
   const voiceMap = loadVoices(ids);
-  return rows.map((row) =>
-    mapPoiCard(
+  return rows.map((row) => {
+    const mapped = mapPoiCard(
       row,
       cityName,
       prosConsMap.get(row.id) ?? [],
       factsMap.get(row.id) ?? {},
       voiceMap.get(row.id) ?? [],
-    ),
-  );
+    );
+    const xhs = row.sourceLayer === "xhs_verified" ? loadXhsCard(row.id) : null;
+    return xhs ? { ...mapped, summary: xhs.summary, summarySourceIds: xhs.summarySourceIds, pros: xhs.pros, cons: xhs.cons, xhsSources: xhs.xhsSources, dataSource: "xhs" as const, geoVerified: true, geoProvider: xhs.geoProvider } : mapped;
+  });
 }
 
 /** 持久化 AI 生成的卡片文案(优缺点进 L3 语料) */

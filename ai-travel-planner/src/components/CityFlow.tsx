@@ -127,6 +127,7 @@ export function CityFlow({
         {
           cityId: p.cityIds[0] ?? cityId,
           days: p.days,
+          travelers: p.travelers,
           origin: p.origin,
           budgetTier: p.budgetTier,
           companion: p.companion,
@@ -149,7 +150,7 @@ export function CityFlow({
             setPreselectNote(data.preselect?.note ?? null);
             setCounts(data.counts ?? null);
             // 默认勾选前 3 个游玩点,降低空手起步门槛
-            const playable = list.filter((c) => c.category !== "stay" && c.category !== "food");
+            const playable = list.filter((c) => c.geoVerified && c.category !== "stay" && c.category !== "food");
             setSelected(new Set(playable.slice(0, 3).map((c) => c.id)));
           },
           onError: (msg) => {
@@ -193,6 +194,7 @@ export function CityFlow({
         poiIds: [...selected],
         lodgingIds: [...selectedLodging],
         days: params.days,
+        travelers: params.travelers,
         origin: params.origin,
         budgetTier: params.budgetTier,
         companion: params.companion,
@@ -254,6 +256,7 @@ export function CityFlow({
 
   const toggle = (id: string) => {
     const card = cards.find((c) => c.id === id);
+    if (!card || card.dataSource === "xhs" && !card.geoVerified) return;
     if (card?.category === "stay") {
       setSelectedLodging((prev) => {
         const next = new Set(prev);
@@ -278,6 +281,7 @@ export function CityFlow({
       city={toCityListItem(cityId, cityName, cityTagline)}
       initial={{
         days: params.days,
+        travelers: params.travelers,
         origin: params.origin,
         budgetTier: params.budgetTier,
         companion: params.companion,
@@ -288,6 +292,7 @@ export function CityFlow({
         const next: TripParams = {
           ...params,
           days: draft.days,
+          travelers: draft.travelers,
           origin: draft.origin,
           budgetTier: draft.budgetTier,
           companion: draft.companion,
@@ -308,7 +313,7 @@ export function CityFlow({
           steps={genSteps}
           running
           title={`正在挑选 ${cityName} 的可玩点`}
-          hint="先由规则层按你的节奏与同行人裁剪候选,再让 AI 生成优缺点文案。通常需要 10–20 秒。"
+          hint="正在生成搜索词、采集小红书笔记与评论，并整理有原文依据的地点。首次采集可能需要较长时间。"
         />
       </div>
     );
@@ -479,11 +484,12 @@ export function CityFlow({
             <button
               type="button"
               className="btn btn-sm"
+              disabled={!cards.some((card) => card.geoVerified && card.category !== "stay" && card.category !== "food")}
               onClick={() =>
                 setSelected(
                   new Set(
                     cards
-                      .filter((c) => c.category !== "stay" && c.category !== "food")
+                      .filter((c) => c.geoVerified && c.category !== "stay" && c.category !== "food")
                       .slice(0, budget.maxByPace)
                       .map((c) => c.id),
                   ),
@@ -536,6 +542,7 @@ function toCityListItem(id: string, name: string, tagline?: string | null): City
 function buildQuery(p: TripParams): string {
   const q = new URLSearchParams({
     days: String(p.days),
+    travelers: String(p.travelers ?? 2),
     budget: p.budgetTier,
     companion: p.companion,
     pace: p.pace,
