@@ -150,7 +150,7 @@ export function TripParamsModal({
         <div className="flex-1 overflow-y-auto px-4 py-3">
           <p className="text-[13.5px] font-medium">先说一下这趟 {city.nameCn} 怎么玩</p>
           <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-soft)]">
-            这些信息会用于生成小红书搜索词和整理推荐点 —— 比如带父母出行,会优先寻找节奏舒缓的内容。
+            这些信息会用于搜索公开网页并整理推荐点 —— 比如带父母出行,会优先寻找节奏舒缓的内容。
             除天数外都可以跳过,跳过时按标准值处理。
           </p>
 
@@ -255,7 +255,7 @@ export function TripParamsModal({
 
         <div className="flex items-center justify-between gap-3 border-t border-[var(--line)] px-4 py-3">
           <span className="text-[12px] text-[var(--ink-faint)]">
-            下一步将搜索小红书笔记与评论
+            下一步将搜索公开网页资料
           </span>
           <div className="flex gap-2">
             <button type="button" className="btn btn-sm" onClick={onClose}>

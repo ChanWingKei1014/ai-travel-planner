@@ -107,8 +107,8 @@ async function runPlan(
   if ([...params.poiIds, ...params.lodgingIds].some((id) => !found.has(id))) {
     throw new Error("所选地点尚未核实坐标或已失效，请返回重新选择");
   }
-  if (cards.some((card) => card.dataSource === "xhs" && !card.geoVerified)) {
-    throw new Error("所选小红书地点尚未核实坐标，暂不能排程");
+  if (cards.some((card) => card.dataSource && !card.geoVerified)) {
+    throw new Error("所选采集地点尚未核实坐标，暂不能排程");
   }
   if (cards.length === 0) throw new Error("所选点位不存在,请返回重新选择");
 
@@ -126,8 +126,9 @@ async function runPlan(
     : [...new Set(playableAndFood.map((p) => p.cityId))];
 
   // 未选住宿时,用该城市的全部住宿候选池做"住宿建议"
+  const selectedSources = new Set(cards.map((card) => card.dataSource).filter(Boolean));
   const lodgingPool = cityIds.flatMap((cid) =>
-    listPoiCardsByCity(cid).filter((p) => p.category === "stay" && (cards.every((c) => c.dataSource !== "xhs") || p.dataSource === "xhs" && p.geoVerified)),
+    listPoiCardsByCity(cid).filter((p) => p.category === "stay" && (!selectedSources.size || p.geoVerified && selectedSources.has(p.dataSource))),
   );
   if (lodgings.length === 0 && lodgingPool.length > 0) {
     step("T1", `正在解析已选点位(共 ${cards.length} 个)`, "未选住宿,将按当天区域给出建议");

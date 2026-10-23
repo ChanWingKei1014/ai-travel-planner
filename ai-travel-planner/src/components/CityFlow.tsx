@@ -43,13 +43,18 @@ interface CardsResponse {
   empty?: boolean;
   message?: string;
   counts?: { sight: number; stay: number; food: number };
+  coverage?: { sight: number; stay: number; food: number };
+  warnings?: string[];
   preselect?: { total: number; selected: number; note?: string };
   meta?: {
     mode: string;
     model: string;
     cached: boolean;
     latencyMs: number;
-    costCny: number;
+    costCny: number | null;
+    searchRequests?: number;
+    fetchRequests?: number;
+    searchCostUsd?: number;
     ok: boolean;
     error?: string;
   } | null;
@@ -95,6 +100,7 @@ export function CityFlow({
   const [meta, setMeta] = useState<CardsResponse["meta"]>(null);
   const [preselectNote, setPreselectNote] = useState<string | null>(null);
   const [counts, setCounts] = useState<CardsResponse["counts"] | null>(null);
+  const [cardWarnings, setCardWarnings] = useState<string[]>([]);
 
   const [detailPoi, setDetailPoi] = useState<CardWithFacts | null>(null);
 
@@ -116,6 +122,9 @@ export function CityFlow({
       setGenSteps([]);
       setMeta(null);
       setCards([]);
+      setCardWarnings([]);
+      setCounts(null);
+      setPreselectNote(null);
       setSelected(new Set());
       setSelectedLodging(new Set());
       setTab("all");
@@ -148,9 +157,10 @@ export function CityFlow({
             setCards(list);
             setMeta(data.meta ?? null);
             setPreselectNote(data.preselect?.note ?? null);
-            setCounts(data.counts ?? null);
+            setCounts(data.counts ?? data.coverage ?? null);
+            setCardWarnings(data.warnings ?? []);
             // 默认勾选前 3 个游玩点,降低空手起步门槛
-            const playable = list.filter((c) => c.geoVerified && c.category !== "stay" && c.category !== "food");
+            const playable = list.filter((c) => (!c.dataSource || c.geoVerified) && c.category !== "stay" && c.category !== "food");
             setSelected(new Set(playable.slice(0, 3).map((c) => c.id)));
           },
           onError: (msg) => {
@@ -256,7 +266,7 @@ export function CityFlow({
 
   const toggle = (id: string) => {
     const card = cards.find((c) => c.id === id);
-    if (!card || card.dataSource === "xhs" && !card.geoVerified) return;
+    if (!card || card.dataSource && !card.geoVerified) return;
     if (card?.category === "stay") {
       setSelectedLodging((prev) => {
         const next = new Set(prev);
@@ -313,7 +323,7 @@ export function CityFlow({
           steps={genSteps}
           running
           title={`正在挑选 ${cityName} 的可玩点`}
-          hint="正在生成搜索词、采集小红书笔记与评论，并整理有原文依据的地点。首次采集可能需要较长时间。"
+          hint="正在根据出行条件搜索公开网页，整理景点、住宿与餐饮的推荐和优缺点，并核对引用依据。"
         />
       </div>
     );
@@ -403,7 +413,7 @@ export function CityFlow({
           <div className="mt-2 rounded-lg bg-[#f2f1ed] px-3 py-2 text-[11.5px] leading-relaxed text-[var(--ink-faint)]">
             {meta.mode === "mock" ? "当前为 Mock 模式(未调用真实模型)" : `模型 ${meta.model}`}
             {meta.cached ? " · 命中缓存" : ` · ${(meta.latencyMs / 1000).toFixed(1)}s`}
-            {meta.costCny > 0 ? ` · 本次约 ¥${meta.costCny.toFixed(4)}` : ""}
+            {meta.costCny !== null && meta.costCny > 0 ? ` · 本次模型约 ¥${meta.costCny.toFixed(4)}` : ""}
             {meta.ok ? "" : ` · ⚠ ${meta.error ?? "已降级为本地内容"}`}
           </div>
         )}
@@ -413,6 +423,12 @@ export function CityFlow({
             <span>景点类 {counts.sight} 个</span>
             <span>住宿 {counts.stay} 家</span>
             <span>餐饮 {counts.food} 家</span>
+          </div>
+        )}
+        {cardWarnings.length > 0 && (
+          <div role="status" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+            <p className="font-medium">资料覆盖提示</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">{cardWarnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
           </div>
         )}
       </div>
@@ -484,12 +500,12 @@ export function CityFlow({
             <button
               type="button"
               className="btn btn-sm"
-              disabled={!cards.some((card) => card.geoVerified && card.category !== "stay" && card.category !== "food")}
+              disabled={!cards.some((card) => (!card.dataSource || card.geoVerified) && card.category !== "stay" && card.category !== "food")}
               onClick={() =>
                 setSelected(
                   new Set(
                     cards
-                      .filter((c) => c.geoVerified && c.category !== "stay" && c.category !== "food")
+                      .filter((c) => (!c.dataSource || c.geoVerified) && c.category !== "stay" && c.category !== "food")
                       .slice(0, budget.maxByPace)
                       .map((c) => c.id),
                   ),

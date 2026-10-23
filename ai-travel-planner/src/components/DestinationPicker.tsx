@@ -190,7 +190,7 @@ export function DestinationPicker({
                       </span>
                     </span>
                     <span className="shrink-0 text-[11.5px]">
-                      <span className="text-[var(--ink-faint)]">搜索小红书</span>
+                      <span className="text-[var(--ink-faint)]">网页搜索</span>
                     </span>
                   </button>
                 </li>

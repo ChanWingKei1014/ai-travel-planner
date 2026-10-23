@@ -48,7 +48,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
   const isStay = poi.category === "stay";
   const isFood = poi.category === "food";
   const factsIsAiSeed = poi.factsProvider === "ai_seed";
-  const awaitingGeo = poi.dataSource === "xhs" && !poi.geoVerified;
+  const awaitingGeo = Boolean(poi.dataSource) && !poi.geoVerified;
   const extraVoices = Math.max(0, poi.userVoices.length - VOICE_LIMIT_ON_CARD);
 
   return (
@@ -105,6 +105,12 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
             依据 {poi.xhsSources?.length ?? 0} 条小红书笔记 / 评论整理 · 详情可查看来源
           </p>
         )}
+        {poi.dataSource === "deepseek_search" && (
+          <p className="mt-1 text-[11.5px] text-[var(--ink-faint)]">
+            依据 {poi.webSources?.length ?? 0} 条网页资料整理 · 详情可查看来源与引用
+            {poi.webSources?.some((source) => source.contentKind === "search_summary") ? " · 含搜索摘要" : ""}
+          </p>
+        )}
 
         {/* 好处 */}
         {poi.pros.length > 0 && (
@@ -122,6 +128,9 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
               ))}
             </ul>
           </div>
+        )}
+        {poi.dataSource === "deepseek_search" && poi.pros.length === 0 && (
+          <div className="mt-3 text-[12px] text-[var(--ink-faint)]">✅ 好处：现有资料不足，暂未提取到有依据的优点。</div>
         )}
 
         {/* 不好的一面 —— 保留、不折叠(D-50) */}
@@ -142,6 +151,9 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
               ))}
             </ul>
           </div>
+        )}
+        {poi.dataSource === "deepseek_search" && poi.cons.length === 0 && (
+          <div className="mt-3 text-[12px] text-[var(--accent)]">⚠️ 不好的一面：现有资料不足，暂未提取到有依据的缺点，不代表没有缺点。</div>
         )}
 
         {/* ★ 客观信息行(v2.0 上移到「去过的人说」上方) */}
@@ -199,7 +211,7 @@ export function PoiCardView({ poi, selected, onToggle, onOpenDetail }: PoiCardVi
         )}
 
         {/* 去过的人说(卡片最多 3 条,超出进抽屉) */}
-        {poi.dataSource !== "xhs" && <div className="mt-3 flex-1">
+        {poi.dataSource !== "xhs" && (!poi.dataSource || poi.geoVerified) && <div className="mt-3 flex-1">
           <div className="mb-1.5 text-[12px] font-medium text-[var(--ink-soft)]">
             💬 去过的人说
             <span className="ml-1 font-normal text-[var(--ink-faint)]">

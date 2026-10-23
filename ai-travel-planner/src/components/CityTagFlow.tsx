@@ -37,7 +37,7 @@ export function CityTagFlow({ cities, onPick, onMore, limit = 20 }: CityTagFlowP
             {isHot && <span className="tnum opacity-60">#{c.rank}</span>}
             <span className="text-[15px] leading-none">{c.icon}</span>
             {c.nameCn}
-            <span className="text-[10.5px] font-normal opacity-60">搜索小红书</span>
+            <span className="text-[10.5px] font-normal opacity-60">网页搜索</span>
           </button>
         );
       })}

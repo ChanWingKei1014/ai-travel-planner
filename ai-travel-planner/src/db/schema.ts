@@ -129,6 +129,24 @@ export const xhsCards = sqliteTable(
   (t) => [index("xhs_cards_city_idx").on(t.cityId)],
 );
 
+/** 网页推荐候选：与小红书独立留存，坐标核实后才进入 pois。 */
+export const webCards = sqliteTable(
+  "web_cards",
+  {
+    id: text("id").primaryKey(),
+    cityId: text("city_id").notNull(),
+    cardJson: text("card_json").notNull(),
+    geoVerified: integer("geo_verified", { mode: "boolean" }).notNull().default(false),
+    lat: real("lat"),
+    lng: real("lng"),
+    area: text("area"),
+    geoProvider: text("geo_provider"),
+    collectedAt: text("collected_at").notNull(),
+    verifiedAt: text("verified_at"),
+  },
+  (t) => [index("web_cards_city_idx").on(t.cityId)],
+);
+
 /** 优缺点条目 —— 展示层与语料层分离(决策 D-25) */
 export const poiProsCons = sqliteTable(
   "poi_pros_cons",
@@ -142,7 +160,7 @@ export const poiProsCons = sqliteTable(
     /** 展示层:对外展示的文本。升级前为用户原文,升级后与 text 一致 */
     displayText: text("display_text").notNull(),
     sourceType: text("source_type", {
-      enum: ["official", "review", "xhs", "ugc", "ai_inferred"],
+      enum: ["official", "review", "xhs", "web", "ugc", "ai_inferred"],
     }).notNull(),
     /**
      * 条目来源(与 source_type 是两件事):

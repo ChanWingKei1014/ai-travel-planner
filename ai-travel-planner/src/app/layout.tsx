@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <footer className="mx-auto w-full max-w-[1180px] px-4 pb-12 sm:px-6">
           <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-warm)] px-5 py-4 text-[12.5px] leading-relaxed text-[var(--ink-faint)]">
             <p>
-              推荐点依据小红书笔记与评论整理,属于用户分享而非官方核验。门票、开放时间等信息可能变化,
+              推荐点依据公开网页资料整理，详情中区分页面正文与搜索摘要。门票、开放时间等信息可能变化,
               出行前请以官方渠道为准。
             </p>
             <p className="mt-1.5">

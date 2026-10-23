@@ -16,7 +16,10 @@
     "test:scheduler": "tsx scripts/test-scheduler.ts",
     "test:llm": "tsx scripts/test-llm.ts",
     "test:xhs": "node --import tsx scripts/test-xhs-crawler.ts && node --import tsx scripts/test-xhs-acceptance.ts && node --import tsx scripts/test-xhs-ui.tsx",
-    "xhs:verify": "tsx scripts/verify-xhs-poi.ts"
+    "xhs:verify": "tsx scripts/verify-xhs-poi.ts",
+    "test:search": "node --import tsx scripts/test-search-client.ts && node --import tsx scripts/test-search-llm.ts && node --import tsx scripts/test-search-acceptance.ts && node --import tsx scripts/test-search-ui.tsx && node --import tsx scripts/test-search-hydration.ts && node --import tsx scripts/test-search-evidence.ts",
+    "search:smoke": "tsx scripts/smoke-search-live.ts",
+    "search:verify": "tsx scripts/verify-search-poi.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

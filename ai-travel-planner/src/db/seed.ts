@@ -115,12 +115,12 @@ function upsertHotRankings(): void {
 
 function clearCityPois(cityId: string): void {
   const existing = db.select({ id: pois.id }).from(pois)
-    .where(and(eq(pois.cityId, cityId), ne(pois.sourceLayer, "xhs_verified"))).all();
+    .where(and(eq(pois.cityId, cityId), ne(pois.sourceLayer, "xhs_verified"), ne(pois.sourceLayer, "web_verified"))).all();
   for (const p of existing) {
     db.delete(poiProsCons).where(eq(poiProsCons.poiId, p.id)).run();
     db.delete(poiFacts).where(eq(poiFacts.poiId, p.id)).run();
   }
-  db.delete(pois).where(and(eq(pois.cityId, cityId), ne(pois.sourceLayer, "xhs_verified"))).run();
+  db.delete(pois).where(and(eq(pois.cityId, cityId), ne(pois.sourceLayer, "xhs_verified"), ne(pois.sourceLayer, "web_verified"))).run();
 }
 
 function importCity(file: SeedFile, city: CitySeed): number {

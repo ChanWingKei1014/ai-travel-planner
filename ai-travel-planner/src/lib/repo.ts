@@ -39,6 +39,7 @@ import { id, nowIso, shareSlug } from "@/lib/ids";
 import { attachNearby } from "@/lib/nearby";
 import { safeJson } from "@/lib/utils";
 import { loadXhsCard } from "@/lib/xhs/store";
+import { loadWebCard } from "@/lib/search/store";
 
 /* ============================================================
  * 城市
@@ -432,6 +433,8 @@ function hydratePoiCards(rows: Array<typeof pois.$inferSelect>, cityName: string
       voiceMap.get(row.id) ?? [],
     );
     const xhs = row.sourceLayer === "xhs_verified" ? loadXhsCard(row.id) : null;
+    const web = row.sourceLayer === "web_verified" ? loadWebCard(row.id) : null;
+    if (web) return { ...mapped, name: web.name, summary: web.summary, summarySourceIds: web.summarySourceIds, summarySourceQuote: web.summarySourceQuote, pros: web.pros, cons: web.cons, webSources: web.webSources, webAliases: web.webAliases, dataSource: "deepseek_search" as const, geoVerified: web.geoVerified, geoProvider: web.geoProvider };
     return xhs ? { ...mapped, summary: xhs.summary, summarySourceIds: xhs.summarySourceIds, pros: xhs.pros, cons: xhs.cons, xhsSources: xhs.xhsSources, dataSource: "xhs" as const, geoVerified: true, geoProvider: xhs.geoProvider } : mapped;
   });
 }

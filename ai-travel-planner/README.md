@@ -15,7 +15,7 @@ pnpm install
 
 # 2. 配置环境变量
 cp .env.example .env.local
-#   LLM_MODE=mock  → 不调用真实模型；小红书推荐需要 live 模式
+#   LLM_MODE=mock  → 不调用真实模型；推荐搜索会提示切换 live
 #   LLM_MODE=live  → 真实调用 DeepSeek
 #   DEEPSEEK_API_KEY 可留空,本机开发会自动从 ~/.dsh/.credentials.yaml 读取
 
@@ -33,9 +33,21 @@ pnpm gen:seed sydney     # 指定城市
 pnpm dev                # http://localhost:3210
 ```
 
-### 小红书推荐数据源
+### DeepSeek 搜索推荐数据源
 
-选择目的地并填写行程条件后，`/api/cards` 会生成搜索词，启动相邻目录的 MediaCrawler 搜索笔记和评论，再整理成带原文依据的卡片。需要 `LLM_MODE=live`、可用的 DeepSeek 凭证、MediaCrawler 的 Python 环境，以及 **MediaCrawler 专用 Chrome 配置目录** `../MediaCrawler/browser_data/cdp_xhs_user_data_dir` 中的小红书登录态；日常 Chrome 登录不会自动共享到该目录。采集在服务端运行，建议本机开发使用；无浏览器的部署环境需要另行提供采集服务。
+用户选择目的地并填写天数、人数、出发地、预算、同行人及节奏后，`/api/cards` 默认使用 DeepSeek Search 获取公开网页材料，再由现有 `deepseek-v4-flash` 整理为景点、住宿（含酒店 / 民宿）、餐饮三类卡片。需要 `LLM_MODE=live` 和可用 DeepSeek 凭证；不需要 MediaCrawler 或小红书登录。搜索失败不会静默回退到小红书或种子数据。
+
+- 服务器复用 `DEEPSEEK_API_KEY`，调用 `/v1/tools/search`；必要时调用 `/v1/tools/fetch` 获取正文。模型地址 `DEEPSEEK_BASE_URL` 与工具地址 `DEEPSEEK_SEARCH_BASE_URL` 独立配置，后者默认 `https://api.deepseek.com`。
+- 三类分别执行发现、体验利弊检索，共 6 条基础查询；每类少于 3 个候选或全部没有有据可查的不足时，最多补搜 3 次；请求耗时达到 165 秒时跳过补搜并提示。每次默认返回 8 个搜索结果，初始检索与补搜各最多整理 24 个新来源，请求总计最多 48 个；每 6 个来源一个模型批次、最多 8 批，每阶段最多 2 批并发。整个请求默认最多 Fetch 3 个页面，补搜不重置预算。配置范围见 `.env.example`。
+- 来源明确区分“网页正文”和“搜索摘要”，展示标题、链接、获取时间与必要摘录；逐条校验引文，缺少证据的优缺点或数字不补造。结果页显示三类覆盖数量及不足提示，不能保证覆盖所有地点、点评或实时房价。
+- 搜索请求成功但无合格候选时展示空结果说明、缺类提示和重试入口；搜索全部失败、鉴权 / 余额错误或模型整理全部批次失败时明确报错，部分批次失败保留可用结果并提示。
+- 新地点先展示，坐标人工核实后才能加入行程。`pnpm search:verify <web_id> <纬度> <经度> <区域> <核实来源>` 用于核实；重新生成保留核实结果。详情里的来源链接用于核对材料，不代表官方核实。
+- `pnpm test:search` 运行离线搜索、证据、保存及核实回归；`pnpm search:smoke` 实际调用 Search 与模型，默认在临时数据库完成联调，将摘要写入 `data/search-acceptance-*.json`。真实调用可能产生费用，完整验收结果另见本次验收记录。
+- 截至 2026-10-22，[官方标价](https://api-docs.deepseek.com/guides/search/)为 Search / Fetch 各 $0.75 / 千次有结果的成功请求，模型 token 另计。默认查询与正文请求上限在无重试时约 $0.009 / 轮工具费用；这不是含模型的总成本，不预设任何特定工具通道免费优惠适用。
+
+### 小红书数据源（保留能力）
+
+原有小红书检索、采集与整理实现保留供后续功能调用；默认 `/api/cards` 已按 v2.2 改为上面的网页搜索链路，不会自动触发小红书采集。单独使用此能力时，需要 `LLM_MODE=live`、可用的 DeepSeek 凭证、MediaCrawler 的 Python 环境，以及 **MediaCrawler 专用 Chrome 配置目录** `../MediaCrawler/browser_data/cdp_xhs_user_data_dir` 中的小红书登录态；日常 Chrome 登录不会自动共享到该目录。采集在服务端运行，建议本机开发使用；无浏览器的部署环境需要另行提供采集服务。
 
 - 默认读取 `../MediaCrawler` 和 `../MediaCrawler/.venv/bin/python`；路径不同可在 `.env.local` 配置 `MEDIA_CRAWLER_DIR`、`MEDIA_CRAWLER_PYTHON`。
 - 每次请求使用独立临时目录；当前单进程一次只运行一个采集任务。适配层优先连接已打开的专用 Chrome，搜索时每类关键词最多整理 2 篇笔记、每篇最多 2 条评论；采集超时、登录失效、平台临时限流、无结果和整理失败都会在页面显示原因并允许重试。连续测试时应留出间隔，避免频繁触发平台限制。
@@ -61,7 +73,7 @@ cd ../ai-travel-planner
 
 已经安装并应用过补丁时，无需重复执行。不要把已有登录目录替换成新克隆。保持 `config/base_config.py` 中 `ENABLE_CDP_MODE = True`、`CDP_HEADLESS = False`，建议将 `CRAWLER_MAX_SLEEP_SEC` 设为 `5`；适配层会自动选择启动或连接专用 Chrome，无需修改上游的 `CDP_CONNECT_EXISTING`。
 
-首次在网页搜索时，MediaCrawler 会打开专用 Chrome；按提示登录小红书。登录检查脚本已随本项目提交，不依赖上游目录中的额外 `check_login.py`。换电脑后需要重新配置 `.env.local`、初始化数据库并登录，旧电脑的登录态和采集数据不会随 GitHub 同步。
+单独触发小红书采集时，MediaCrawler 会打开专用 Chrome；按提示登录小红书。登录检查脚本已随本项目提交，不依赖上游目录中的额外 `check_login.py`。换电脑后需要重新配置 `.env.local`、初始化数据库并登录，旧电脑的登录态和采集数据不会随 GitHub 同步。
 
 ### 内置账号
 
@@ -79,6 +91,8 @@ cd ../ai-travel-planner
 ## 验证命令
 
 ```bash
+pnpm test:search      # DeepSeek 搜索链路离线回归（不产生 API 费用）
+pnpm test:xhs         # 小红书保留能力离线回归
 pnpm test:scheduler   # 排程引擎自检(纯算法,不调用 AI)
 pnpm exec tsc --noEmit   # 类型检查
 ```
@@ -99,8 +113,8 @@ pnpm exec tsc --noEmit   # 类型检查
 ```
 发现页标签墙(国内/国外 + 热门 Top5)
    ↓ 点城市
-行程参数(天数/出发地/预算/同行人/节奏)
-   ↓ 规则层个性化裁剪
+行程参数(天数/人数/出发地/预算/同行人/节奏)
+   ↓ DeepSeek Search 三类发现与利弊检索 → 证据整理 → 覆盖补搜
 可玩点卡片(图片 + 简介 + 好处 + 不好的一面 + 来源标记 + 多选)
    ↓ 生成攻略
 排程引擎(区域聚类 + 硬约束求解)→ 结构化日程 JSON
@@ -137,9 +151,9 @@ pnpm exec tsc --noEmit   # 类型检查
 
 这样既保住用户原话的真实感,又不会让 AI 学到用户的口吻与绝对化表达。
 
-### 来源标记四色体系
+### 来源标记与网页证据
 
-每条优缺点必须携带来源标记,不允许出现无标记条目:
+每条优缺点必须携带来源标记，不允许出现无标记条目。默认搜索推荐使用“网页正文”或“搜索摘要”，通过 URL、标题、摘录和获取时间溯源；小红书保留能力使用“小红书”。既有种子、人工维护及站内 UGC 继续使用以下体系：
 
 | 标记 | 含义 |
 |---|---|
@@ -222,4 +236,4 @@ src/
 - ⬜ 多城市联游(P1,引擎已支持,UI 未放开)
 - ⬜ 第三方 POI / 图库 API 接入(P1,当前图片为占位)
 
-详细决策与实测记录见上级目录的 `项目决策记录.md` 和 `小红书数据源-验收记录-2026-10-20.md`，本次需求见 `旅游攻略-需求文档-v2.1-小红书数据源.md`。小红书采集仍有平台临时请求失败及三类覆盖待验项，当前验收状态以验收记录为准。
+当前默认推荐需求见上级目录 `旅游攻略-需求文档-v2.2-DeepSeek搜索数据源.md`，与 v2.0 组成当前基线；本次实现与验收结果见 [验收记录](../DeepSeek搜索数据源-验收记录-2026-10-22.md)。决策与变更见 `项目决策记录.md`、`需求变更记录.md`。v2.1 及 `小红书数据源-验收记录-2026-10-20.md` 保留为小红书能力历史记录，不能代表新搜索链路已通过验收。

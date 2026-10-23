@@ -1,9 +1,9 @@
-/** 根据用户条件采集小红书材料，生成带证据的地点卡片。 */
+/** 根据用户条件搜索网页资料，生成带证据的地点卡片；小红书模块独立保留。 */
 import { NextResponse } from "next/server";
 import { getCityRaw } from "@/lib/repo";
 import { DEFAULT_TRIP_PARAMS, type BudgetTier, type Companion, type Pace, type TripParams } from "@/lib/types";
 import { createSseResponse, createStepEmitter } from "@/lib/sse";
-import { runCardPipeline } from "@/lib/xhs/pipeline";
+import { runSearchCardPipeline } from "@/lib/search/pipeline";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -31,11 +31,11 @@ export async function POST(req: Request) {
     pace: VALID_PACE.includes(body.pace as Pace) ? body.pace! : DEFAULT_TRIP_PARAMS.pace,
   };
   if (body.plain) {
-    try { return NextResponse.json(await runCardPipeline(cityId, city.nameCn, params, () => {})); }
+    try { return NextResponse.json(await runSearchCardPipeline(cityId, city.nameCn, params, () => {})); }
     catch (error) { return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "推荐生成失败" }, { status: 503 }); }
   }
   return createSseResponse(async (emit, sendResult) => {
     const step = createStepEmitter(emit, 6);
-    sendResult(await runCardPipeline(cityId, city.nameCn, params, step));
+    sendResult(await runSearchCardPipeline(cityId, city.nameCn, params, step));
   });
 }

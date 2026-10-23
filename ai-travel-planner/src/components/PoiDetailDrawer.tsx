@@ -20,6 +20,7 @@ import {
   MEAL_LABEL,
   PHYSICAL_LOAD_LABEL,
   type PoiCard,
+  type ProsConsItem,
 } from "@/lib/types";
 import { formatDurationRange, relativeTime } from "@/lib/utils";
 import { nearbyLine } from "@/lib/nearby";
@@ -68,7 +69,7 @@ export function PoiDetailDrawer({
   const isStay = poi.category === "stay";
   const isFood = poi.category === "food";
   const factsIsAiSeed = poi.factsProvider === "ai_seed";
-  const awaitingGeo = poi.dataSource === "xhs" && !poi.geoVerified;
+  const awaitingGeo = Boolean(poi.dataSource) && !poi.geoVerified;
 
   const report = async () => {
     setReporting(true);
@@ -131,7 +132,8 @@ export function PoiDetailDrawer({
           </div>
 
           <p className="text-[13.5px] leading-relaxed text-[var(--ink)]">{poi.summary}</p>
-          {poi.summarySourceIds?.length ? <p className="mt-1 text-[11px] text-[var(--ink-faint)]">简介依据 {poi.summarySourceIds.join("、")}</p> : null}
+          {poi.dataSource !== "deepseek_search" && poi.summarySourceIds?.length ? <p className="mt-1 text-[11px] text-[var(--ink-faint)]">简介依据 {poi.summarySourceIds.join("、")}</p> : null}
+          {poi.dataSource === "deepseek_search" && <ClaimEvidence item={{ sourceIds: poi.summarySourceIds, sourceQuote: poi.summarySourceQuote }} poi={poi} />}
 
           {/* 适合人群/体力 */}
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -156,12 +158,16 @@ export function PoiDetailDrawer({
                     <span className="flex-1">
                       {p.text}
                       <SourceBadge type={p.sourceType} detail={p.sourceDetail} />
-                      {p.sourceIds?.length ? <span className="ml-1 text-[11px] text-[var(--ink-faint)]">依据 {p.sourceIds.join("、")}</span> : null}
+                      {poi.dataSource !== "deepseek_search" && p.sourceIds?.length ? <span className="ml-1 text-[11px] text-[var(--ink-faint)]">依据 {p.sourceIds.join("、")}</span> : null}
+                      {poi.dataSource === "deepseek_search" && <ClaimEvidence item={p} poi={poi} />}
                     </span>
                   </li>
                 ))}
               </ul>
             </section>
+          )}
+          {poi.dataSource === "deepseek_search" && poi.pros.length === 0 && (
+            <section className="mt-4"><h3 className="text-[13px] font-semibold text-[var(--brand)]">✅ 好处</h3><p className="mt-1 text-[12.5px] text-[var(--ink-faint)]">现有资料不足，暂未提取到有依据的优点。</p></section>
           )}
 
           {/* 全部不好的一面 */}
@@ -177,12 +183,16 @@ export function PoiDetailDrawer({
                     <span className="flex-1">
                       {c.text}
                       <SourceBadge type={c.sourceType} detail={c.sourceDetail} />
-                      {c.sourceIds?.length ? <span className="ml-1 text-[11px] text-[var(--ink-faint)]">依据 {c.sourceIds.join("、")}</span> : null}
+                      {poi.dataSource !== "deepseek_search" && c.sourceIds?.length ? <span className="ml-1 text-[11px] text-[var(--ink-faint)]">依据 {c.sourceIds.join("、")}</span> : null}
+                      {poi.dataSource === "deepseek_search" && <ClaimEvidence item={c} poi={poi} />}
                     </span>
                   </li>
                 ))}
               </ul>
             </section>
+          )}
+          {poi.dataSource === "deepseek_search" && poi.cons.length === 0 && (
+            <section className="mt-4"><h3 className="text-[13px] font-semibold text-[var(--accent)]">⚠️ 不好的一面</h3><p className="mt-1 text-[12.5px] text-[var(--accent)]">现有资料不足，暂未提取到有依据的缺点，不代表没有缺点。</p></section>
           )}
 
           {/* 完整客观信息 */}
@@ -256,6 +266,24 @@ export function PoiDetailDrawer({
                     <div className="font-medium">{source.kind === "comment" ? "评论" : "笔记"} · {source.title || source.noteId} <span className="font-normal text-[var(--ink-faint)]">({source.id})</span></div>
                     <p className="text-[var(--ink-soft)]">{source.excerpt}</p>
                     {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] hover:underline">查看原文 ↗</a>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {poi.dataSource === "deepseek_search" && (
+            <section className="mt-4 rounded-xl border border-[var(--line)] p-3">
+              <h3 className="mb-1.5 text-[13px] font-semibold">网页资料来源</h3>
+              <p className="mb-2 text-[11.5px] text-[var(--ink-faint)]">卡片据公开网页资料整理。搜索摘要并非页面原文；网页内容不等于官方核验。</p>
+              <ul className="space-y-3">
+                {(poi.webSources ?? []).map((source) => (
+                  <li id={`source-${source.id}`} key={source.id} className="scroll-mt-3 break-words text-[12px] leading-relaxed">
+                    <div className="font-medium">{source.title || source.url}</div>
+                    <div className="text-[11px] text-[var(--ink-faint)]">{source.contentKind === "page" ? "页面正文摘录" : "搜索摘要（非页面原文）"}{source.siteName ? ` · ${source.siteName}` : ""}</div>
+                    <p className="mt-1 whitespace-pre-wrap text-[var(--ink-soft)]">{source.excerpt}</p>
+                    {safeWebUrl(source.url) && <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] hover:underline">查看来源页面 ↗<span className="block break-all text-[11px]">{source.url}</span></a>}
+                    <div className="mt-1 text-[11px] text-[var(--ink-faint)]">获取时间：{formatSourceTime(source.retrievedAt)}（北京时间）{source.publishedAt ? ` · 发布日期：${formatSourceTime(source.publishedAt, false)}` : ""}</div>
                   </li>
                 ))}
               </ul>
@@ -368,4 +396,25 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function levelLabel(level: string): string {
   return { free: "节省", low: "较低", medium: "标准", high: "较高" }[level] ?? level;
+}
+
+function safeWebUrl(url: string): boolean {
+  try { return ["http:", "https:"].includes(new URL(url).protocol); } catch { return false; }
+}
+
+function formatSourceTime(value: string, includeTime = true): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "未记录";
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "long", day: "numeric",
+    ...(includeTime ? { hour: "2-digit", minute: "2-digit", hour12: false } as const : {}),
+  }).format(date);
+}
+
+function ClaimEvidence({ item, poi }: { item: Pick<ProsConsItem, "sourceIds" | "sourceQuote">; poi: PoiCard }) {
+  const sources = (item.sourceIds ?? []).map((id) => poi.webSources?.find((source) => source.id === id)).filter((source) => source !== undefined);
+  return <span className="mt-1 block text-[11.5px] text-[var(--ink-faint)]">
+    {item.sourceQuote && <span className="block">引用：「{item.sourceQuote}」</span>}
+    {sources.map((source) => <a key={source.id} href={`#source-${source.id}`} className="mr-2 text-[var(--brand)] hover:underline">{source.contentKind === "page" ? "页面正文" : "搜索摘要"} · {source.title || "查看引用资料"} ↓</a>)}
+  </span>;
 }

@@ -35,7 +35,9 @@ export interface ChatOptions {
   /** 是否要求模型返回 JSON 对象 */
   jsonMode?: boolean;
   timeoutMs?: number;
-  /** 单次任务可省略额外推理参数；来源逐条抽取已有本地证据校验。 */
+  /** 交互式批量任务可限制单次尝试，避免超过整个请求的时间预算。 */
+  maxAttempts?: 1 | 2;
+  /** false 显式关闭思考模式；逐字证据抽取无需消耗额外推理预算。 */
   thinking?: "high" | "max" | false;
 }
 
@@ -115,6 +117,9 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
     if (options.jsonMode !== false) {
       body.response_format = { type: "json_object" };
     }
+    if (options.thinking === false) {
+      body.thinking = { type: "disabled" };
+    }
     if (withReasoning && options.thinking !== false) {
       // 该模型仅支持 high / max 两档
       body.reasoning_effort = options.thinking ?? getThinkingLevel();
@@ -125,7 +130,8 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
   let attempt = 0;
   let lastError = "";
 
-  while (attempt < 2) {
+  const maxAttempts = options.maxAttempts ?? 2;
+  while (attempt < maxAttempts) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -144,7 +150,7 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
       if (!res.ok) {
         lastError = `HTTP ${res.status}: ${rawText.slice(0, 400)}`;
         // 首次带 reasoning_effort 被拒 → 去掉该参数重试一次
-        if (attempt === 0 && res.status === 400 && /reasoning|thinking|unknown/i.test(rawText)) {
+        if (attempt + 1 < maxAttempts && res.status === 400 && /reasoning|thinking|unknown/i.test(rawText)) {
           attempt++;
           continue;
         }

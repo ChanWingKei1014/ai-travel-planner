@@ -21,7 +21,7 @@ export default function HomePage() {
           <span className="text-[var(--brand)]">可以照着走的行程</span>
         </h1>
         <p className="mt-2.5 max-w-[620px] text-[14px] leading-relaxed text-[var(--ink-soft)]">
-          {APP_NAME} 从小红书笔记和评论中整理有来源的推荐点。你选城市、填写出行信息，
+          {APP_NAME} 从公开网页资料中整理有来源的推荐点。你选城市、填写出行信息，
           核实坐标后的点位可加入行程，再由算法安排路线。卡片会展示有依据的
           <span className="text-[var(--brand)]">好处</span>与
           <span className="text-[var(--accent)]">不好的一面</span>,并标注信息来源。
@@ -63,7 +63,7 @@ export default function HomePage() {
         <div className="mt-2.5 grid gap-3 sm:grid-cols-3">
           {[
             ["1 · 选城市", "从国内/国外标签墙里挑目的地,热门榜带 icon 标识。"],
-            ["2 · 挑可玩点", "先填天数、人数与节奏，系统搜索小红书并整理有依据的候选卡片。"],
+            ["2 · 挑可玩点", "先填天数、人数与节奏，系统搜索公开网页，整理景点、住宿和餐饮的候选卡片。"],
             ["3 · 拿行程", "算法排程 + AI 配文案,按上午/下午/晚上给到可直接执行的日程。"],
           ].map(([t, d]) => (
             <div key={t}>

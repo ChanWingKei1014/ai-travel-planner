@@ -7,11 +7,12 @@
  * 一、来源标记体系(需求文档 5.2.4 / 决策 D-12、D-16、D-24)
  * ============================================================ */
 
-/** 优缺点条目的来源类型 —— 必须四选一,不允许出现无标记的条目 */
+/** 优缺点条目的来源类型，不允许出现无标记的条目。 */
 export type SourceType =
   | "official" // 官方:来自景点官网/官方发布
   | "review" // 评论:来自真实用户评论的归纳,含被交叉验证的 UGC
   | "xhs" // 小红书笔记或评论整理，保留原文引用
+  | "web" // 公开网页资料，保留页面或搜索摘要证据
   | "ugc" // 用户反馈:本站用户提交的原文,尚未达到交叉验证条件
   | "ai_inferred"; // AI 综合:模型基于公开知识归纳,未经核实
 
@@ -19,6 +20,7 @@ export const SOURCE_LABEL: Record<SourceType, string> = {
   official: "官方",
   review: "评论",
   xhs: "小红书",
+  web: "网页资料",
   ugc: "用户反馈",
   ai_inferred: "AI 综合",
 };
@@ -28,6 +30,7 @@ export const SOURCE_STYLE: Record<SourceType, string> = {
   official: "bg-blue-50 text-blue-700 ring-blue-200",
   review: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   xhs: "bg-red-50 text-red-700 ring-red-200",
+  web: "bg-cyan-50 text-cyan-700 ring-cyan-200",
   ugc: "bg-amber-50 text-amber-700 ring-amber-200",
   ai_inferred: "bg-slate-100 text-slate-600 ring-slate-200",
 };
@@ -39,6 +42,8 @@ export interface ProsConsItem {
   sourceDetail?: string;
   /** 小红书笔记或评论的证据 ID；站内旧内容无此字段。 */
   sourceIds?: string[];
+  /** 对应来源中的逐字引用；网页搜索摘要必须标明证据类型。 */
+  sourceQuote?: string;
 }
 
 export interface XhsSourceRef {
@@ -48,6 +53,18 @@ export interface XhsSourceRef {
   title: string;
   url?: string;
   excerpt: string;
+}
+
+export interface WebSourceRef {
+  id: string;
+  url: string;
+  title: string;
+  excerpt: string;
+  contentKind: "page" | "search_summary";
+  siteName?: string;
+  publishedAt?: string;
+  retrievedAt: string;
+  query: string;
 }
 
 /* ============================================================
@@ -207,6 +224,7 @@ export interface PoiCard {
   /** 一句话简介 ≤ 40 字 */
   summary: string;
   summarySourceIds?: string[];
+  summarySourceQuote?: string;
   pros: ProsConsItem[];
   cons: ProsConsItem[];
   /** 建议停留时长(分钟) */
@@ -239,9 +257,11 @@ export interface PoiCard {
   /** 采集点位必须有可核实坐标才能参与排程。 */
   geoVerified?: boolean;
   geoProvider?: string;
-  dataSource?: "xhs";
+  dataSource?: "xhs" | "deepseek_search";
   xhsSources?: XhsSourceRef[];
   xhsAliases?: string[];
+  webSources?: WebSourceRef[];
+  webAliases?: string[];
 }
 
 /** 邻近关系条目 */
